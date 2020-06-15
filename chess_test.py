@@ -117,15 +117,25 @@ def best_move(board, side_color, depth):
 
     for move in board.legal_moves:
         board.push(move)
-        curr_score = minimax(board, not side_color, depth-1, -10000000, 10000000)
+        curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
+        print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
         if abs(curr_score) > best_score:
-            best_score = curr_score
+            best_score = abs(curr_score)
             best = move
         board.pop()
 
     return best
 
 board = chess.Board()
+while 1 == 1:
+    print("Your move:")
+    x = input()
+    board.push(chess.Move.from_uci(""+x))
+    print(board)
+    print("Opponent move:")
+    board.push(best_move(board, 0, 3))
+    print(board)
+
 print(board)
 print(board.legal_moves)
 board.push_san("e4")
