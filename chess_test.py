@@ -71,27 +71,33 @@ def eval_pos(board, side_color):
     #adding up pieces from white's side
     for i in range(6):
         bitboard = board.pieces(i+1, 1).tolist()
-        bitboard.reverse()
+        #bitboard.reverse()
+        w = []
+        for a in range(7, -1, -1):
+            w.extend(bitboard[8*a:8*a+8])
         #summing up the positional advantage of the material
-        score_w += sum(list(compress(eval_list_w[i], bitboard)))
+        score_w += sum(list(compress(eval_list_w[i], w)))
         #summing up the worth of the material
-        score_w += sum(bitboard) * piece_worth[i]
+        score_w += sum(w) * piece_worth[i]
 
     #adding up pieces from black's side
     for i in range(6):
         bitboard = board.pieces(i+1, 0).tolist()
-        bitboard.reverse()
+        #bitboard.reverse()
+        b = []
+        for a in range(7, -1, -1):
+            b.extend(bitboard[8*a:8*a+8])
         #summing up the positional advantage of the material
-        score_b += sum(list(compress(eval_list_b[i], bitboard)))
+        score_b += sum(list(compress(eval_list_b[i], b)))
         #summing up the worth of the material
-        score_b += sum(bitboard) * piece_worth[i]
+        score_b += sum(b) * piece_worth[i]
 
     return score_w-score_b
 
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
-        return eval_pos(board, side_color)
+        return -eval_pos(board, side_color)
     
     if side_color:
         max_eval = -10000000
@@ -118,7 +124,7 @@ def minimax(board, side_color, depth, alpha, beta):
         return min_eval
 
 def best_move(board, side_color, depth):
-    best_score = 10000000
+    best_score = -10000000
     if side_color:
         best_score *= -1
     best = None
@@ -127,7 +133,8 @@ def best_move(board, side_color, depth):
         board.push(move)
         curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
-        if (side_color and curr_score >= best_score) or (not side_color and curr_score <= best_score):
+        #if (side_color and curr_score >= best_score) or (not side_color and curr_score <= best_score):
+        if curr_score >= best_score:
             best_score = curr_score
             best = move
         board.pop()
@@ -138,7 +145,7 @@ board = chess.Board()
 while 1 == 1:
     print("Your move:")
     x = input()
-    board.push(chess.Move.from_uci(""+x))
+    board.push(chess.Move.from_uci(x))
     print(board)
     print("Opponent move:")
     board.push(best_move(board, 0, 4))
