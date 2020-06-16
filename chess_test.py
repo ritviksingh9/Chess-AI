@@ -66,21 +66,33 @@ eval_list_b = [pawn_pos_eval_b, knight_pos_eval_b, bishop_pos_eval_b, rook_pos_e
 piece_worth = [10, 30, 30, 50, 90, 900]
 
 def eval_pos(board, side_color):
-    score = 0
+    score_w = 0
+    score_b = 0
+    #adding up pieces from white's side
     for i in range(6):
-        bitboard = board.pieces(i+1, side_color).tolist()
+        bitboard = board.pieces(i+1, 1).tolist()
         bitboard.reverse()
         #summing up the positional advantage of the material
         if side_color:
-            score += sum(list(compress(eval_list_w[i], bitboard)))
+            score_w += sum(list(compress(eval_list_w[i], bitboard)))
         else:
-            score += sum(list(compress(eval_list_b[i], bitboard)))
+            score_w += sum(list(compress(eval_list_b[i], bitboard)))
         #summing up the worth of the material
-        score += sum(bitboard) * piece_worth[i]
+        score_w += sum(bitboard) * piece_worth[i]
 
-    if not side_color:
-        return -1*score
-    return score
+    #adding up pieces from black's side
+    for i in range(6):
+        bitboard = board.pieces(i+1, 0).tolist()
+        bitboard.reverse()
+        #summing up the positional advantage of the material
+        if side_color:
+            score_b += sum(list(compress(eval_list_w[i], bitboard)))
+        else:
+            score_b += sum(list(compress(eval_list_b[i], bitboard)))
+        #summing up the worth of the material
+        score_b += sum(bitboard) * piece_worth[i]
+
+    return score_w-score_b
 
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
@@ -112,15 +124,17 @@ def minimax(board, side_color, depth, alpha, beta):
         return min_eval
 
 def best_move(board, side_color, depth):
-    best_score = -10000000
+    best_score = 10000000
+    if side_color:
+        best_score *= -1
     best = None
 
     for move in board.legal_moves:
         board.push(move)
         curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
-        if abs(curr_score) > best_score:
-            best_score = abs(curr_score)
+        if (side_color and curr_score >= best_score) or (not side_color and curr_score <= best_score):
+            best_score = curr_score
             best = move
         board.pop()
 
@@ -133,19 +147,5 @@ while 1 == 1:
     board.push(chess.Move.from_uci(""+x))
     print(board)
     print("Opponent move:")
-    board.push(best_move(board, 0, 3))
+    board.push(best_move(board, 0, 4))
     print(board)
-
-print(board)
-print(board.legal_moves)
-board.push_san("e4")
-print(board)
-print(board.pieces(1, 1))
-a = board.pieces(1, 0).tolist()
-a.reverse()
-a = board.legal_moves
-for move in a:
-    print(type(move))
-    break
-board.push(move)
-print(board)
