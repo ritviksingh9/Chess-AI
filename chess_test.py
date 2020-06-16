@@ -73,10 +73,7 @@ def eval_pos(board, side_color):
         bitboard = board.pieces(i+1, 1).tolist()
         bitboard.reverse()
         #summing up the positional advantage of the material
-        if side_color:
-            score_w += sum(list(compress(eval_list_w[i], bitboard)))
-        else:
-            score_w += sum(list(compress(eval_list_b[i], bitboard)))
+        score_w += sum(list(compress(eval_list_w[i], bitboard)))
         #summing up the worth of the material
         score_w += sum(bitboard) * piece_worth[i]
 
@@ -85,10 +82,7 @@ def eval_pos(board, side_color):
         bitboard = board.pieces(i+1, 0).tolist()
         bitboard.reverse()
         #summing up the positional advantage of the material
-        if side_color:
-            score_b += sum(list(compress(eval_list_w[i], bitboard)))
-        else:
-            score_b += sum(list(compress(eval_list_b[i], bitboard)))
+        score_b += sum(list(compress(eval_list_b[i], bitboard)))
         #summing up the worth of the material
         score_b += sum(bitboard) * piece_worth[i]
 
@@ -105,7 +99,7 @@ def minimax(board, side_color, depth, alpha, beta):
             board.push(move)
             curr_eval = minimax(board, 0, depth-1, alpha, beta)
             max_eval = max(max_eval, curr_eval)
-            alpha = max(alpha, curr_eval)
+            alpha = max(alpha, max_eval)
             #pop last move to allow for next move
             board.pop()
             if alpha >= beta:
@@ -117,7 +111,7 @@ def minimax(board, side_color, depth, alpha, beta):
             board.push(move)
             curr_eval = minimax(board, 1, depth-1, alpha, beta)
             min_eval = min(min_eval, curr_eval)
-            beta = min(beta, curr_eval)
+            beta = min(beta, min_eval)
             board.pop()
             if alpha >= beta:
                 return min_eval
