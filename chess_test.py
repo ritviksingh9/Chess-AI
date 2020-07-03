@@ -141,7 +141,6 @@ def best_move(board, side_color, depth):
         board.push(move)
         curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
-        #if (side_color and curr_score >= best_score) or (not side_color and curr_score <= best_score):
         if curr_score >= best_score:
             best_score = curr_score
             best = move
