@@ -81,7 +81,7 @@ for i in range(6):
 
 piece_worth = [10, 30, 30, 50, 90, 900]
 
-def eval_pos(board, side_color):
+def eval_pos(board):
     score_w = 0
     score_b = 0
     #adding up pieces from white's and black's side
@@ -100,11 +100,21 @@ def eval_pos(board, side_color):
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
-        return -eval_pos(board, side_color)
+        return -eval_pos(board)
+    
+    moves = list(board.legal_moves)
+    moves_sorted = []
+    for i in moves:
+        if board.is_capture(i):
+            moves_sorted.append(i)
+    for i in moves_sorted:
+        moves.remove(i)
+    moves_sorted.extend(moves)
     
     if side_color:
         max_eval = -10000000
-        for move in board.legal_moves:
+        #for move in board.legal_moves:
+        for move in moves_sorted:
             board.push(move)
             curr_eval = minimax(board, 0, depth-1, alpha, beta)
             max_eval = max(max_eval, curr_eval)
@@ -116,7 +126,8 @@ def minimax(board, side_color, depth, alpha, beta):
         return max_eval
     else:
         min_eval = 10000000
-        for move in board.legal_moves:
+        #for move in board.legal_moves:
+        for move in moves_sorted:
             board.push(move)
             curr_eval = minimax(board, 1, depth-1, alpha, beta)
             min_eval = min(min_eval, curr_eval)
@@ -145,6 +156,7 @@ def best_move(board, side_color, depth):
 
 if __name__ == "__main__":
     board = chess.Board()
+
     while 1 == 1:
         print("Your move:")
         x = input()
@@ -156,3 +168,10 @@ if __name__ == "__main__":
         end = time.time()
         print("ELAPSED TIME: ", end-start)
         print(board)
+    '''
+    a = list(board.legal_moves)
+    print(a)
+    print(board)
+    board.push(a[0])
+    print(board)
+    '''
