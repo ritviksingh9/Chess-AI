@@ -84,21 +84,16 @@ piece_worth = [10, 30, 30, 50, 90, 900]
 def eval_pos(board, side_color):
     score_w = 0
     score_b = 0
-    #adding up pieces from white's side
+    #adding up pieces from white's and black's side
     for i in range(6):
-        bitboard = board.pieces(i+1, 1).tolist()
+        bitboard_w = board.pieces(i+1, 1).tolist()
+        bitboard_b = board.pieces(i+1, 0).tolist()
         #summing up the positional advantage of the material
-        score_w += sum(list(compress(eval_list_w[i], bitboard)))
+        score_w += sum(list(compress(eval_list_w[i], bitboard_w)))
+        score_b += sum(list(compress(eval_list_b[i], bitboard_b)))
         #summing up the worth of the material
-        score_w += sum(bitboard) * piece_worth[i]
-
-    #adding up pieces from black's side
-    for i in range(6):
-        bitboard = board.pieces(i+1, 0).tolist()
-        #summing up the positional advantage of the material
-        score_b += sum(list(compress(eval_list_b[i], bitboard)))
-        #summing up the worth of the material
-        score_b += sum(bitboard) * piece_worth[i]
+        score_w += sum(bitboard_w) * piece_worth[i]
+        score_b += sum(bitboard_b) * piece_worth[i]
 
     return score_w-score_b
 
