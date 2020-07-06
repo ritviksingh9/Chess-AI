@@ -79,7 +79,7 @@ for i in range(6):
     eval_list_w.append(w)
     eval_list_b.append(b)
 
-piece_worth = [10, 30, 30, 50, 90, 900]
+piece_worth = [10, 32, 33, 50, 90, 900]
 
 def eval_pos(board):
     score_w = 0
@@ -94,13 +94,33 @@ def eval_pos(board):
         #summing up the worth of the material
         score_w += sum(bitboard_w) * piece_worth[i]
         score_b += sum(bitboard_b) * piece_worth[i]
-
     return score_w-score_b
+
+def quiescence(board, alpha, beta, player):
+    stand_pat = player*eval_pos(board)
+    if stand_pat >= beta:
+        return beta
+    if alpha <= stand_pat:
+        alpha = stand_pat
+    moves = list(board.legal_moves)
+    captures = []
+    for i in moves:
+        if board.is_capture(i):
+            captures.append(i)
+    for i in captures:
+        board.push(i)
+        score = -quiescence(board, -beta, -alpha, -player)
+        board.pop()
+        if score >= beta:
+            return score
+        if score > alpha:
+            alpha = score
+    return alpha
 
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
-        return -eval_pos(board)
+        return quiescence(board, alpha, beta, -1)
     
     moves = list(board.legal_moves)
     moves_sorted = []
@@ -155,8 +175,8 @@ def best_move(board, side_color, depth):
     return best
 
 if __name__ == "__main__":
-    board = chess.Board()
-
+    board = chess.Board('2K2k2/8/5p2/1r2n3/8/8/6p1/2nq4 w - - 0 50')
+    
     while 1 == 1:
         print("Your move:")
         x = input()
@@ -164,7 +184,7 @@ if __name__ == "__main__":
         print(board)
         print("Opponent move:")
         start = time.time()
-        board.push(best_move(board, 0, 4))
+        board.push(best_move(board, 0, 5))
         end = time.time()
         print("ELAPSED TIME: ", end-start)
         print(board)
