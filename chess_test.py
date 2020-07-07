@@ -96,7 +96,7 @@ def eval_pos(board):
         score_b += sum(bitboard_b) * piece_worth[i]
     return score_w-score_b
 
-def quiescence(board, alpha, beta, player):
+def quiescence(board, alpha, beta, player): #player = 1 or -1, as oppose to side color which is = 0 or 1
     stand_pat = player*eval_pos(board)
     if stand_pat >= beta:
         return beta
@@ -157,15 +157,43 @@ def minimax(board, side_color, depth, alpha, beta):
                 return min_eval
         return min_eval
 
+def negamax(board, depth, alpha, beta, side_color):
+    if depth == 0:
+        return 2*(side_color-0.5)*eval_pos(board)
+    
+    moves = list(board.legal_moves)
+    moves_sorted = []
+    for i in moves:
+        if board.is_capture(i):
+            moves_sorted.append(i)
+    for i in moves_sorted:
+        moves.remove(i)
+    moves_sorted.extend(moves)
+
+    max_eval = -10000000
+    for move in moves_sorted:
+        board.push(move)
+        curr_eval = -negamax(board, depth-1, -beta, -alpha, 1-side_color)
+        max_eval = max(max_eval, curr_eval)
+        alpha = max(alpha, max_eval)
+        board.pop()
+        if alpha >= beta:
+            return max_eval
+    return max_eval
+
 def best_move(board, side_color, depth):
     best_score = -10000000
+    # the next portion is commented out in negamax implementation
+    '''
     if side_color:
         best_score *= -1
+    '''
     best = None
 
     for move in board.legal_moves:
         board.push(move)
-        curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
+        #curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
+        curr_score = -negamax(board, depth-1, -10000000, 10000000, 1-side_color) # played around with miinmax and negamax a bit
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
         if curr_score >= best_score:
             best_score = curr_score
@@ -175,7 +203,7 @@ def best_move(board, side_color, depth):
     return best
 
 if __name__ == "__main__":
-    board = chess.Board('2K2k2/8/5p2/1r2n3/8/8/6p1/2nq4 w - - 0 50')
+    board = chess.Board()
     
     while 1 == 1:
         print("Your move:")
