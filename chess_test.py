@@ -2,6 +2,7 @@ import chess
 from itertools import compress
 import time
 
+mate_score = 1000
 pawn_pos_eval_w = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                     5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,
                     1.0,  1.0,  2.0,  3.0,  3.0,  2.0,  1.0,  1.0,
@@ -81,7 +82,7 @@ for i in range(6):
 
 piece_worth = [10, 32, 33, 50, 90, 900]
 
-def eval_pos(board):
+def eval_pos(board): #POV of white
     score_w = 0
     score_b = 0
     #adding up pieces from white's and black's side
@@ -116,7 +117,7 @@ def quiescence(board, alpha, beta, player): #player = 1 or -1, as oppose to side
         if score > alpha:
             alpha = score
     return alpha
-
+ 
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
@@ -181,6 +182,37 @@ def negamax(board, depth, alpha, beta, side_color):
             return max_eval
     return max_eval
 
+def pvSearch (board, depth, alpha, beta, side_color):
+    if depth == 0:
+        return 2*(side_color-0.5)*eval_pos(board)
+        #return quiescence(board, alpha, beta, 2*(side_color-0.5))
+    
+    moves = list(board.legal_moves)
+    moves_sorted = []
+    for i in moves:
+        if board.is_capture(i):
+            moves_sorted.append(i)
+    for i in moves_sorted:
+        moves.remove(i)
+    moves_sorted.extend(moves)
+
+    bSearchPv = True
+    for move in moves_sorted:
+        board.push(move)
+        if (bSearchPv):
+            score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
+        else:
+            score = -pvSearch(board, depth-1, -alpha-1, -alpha, 1-side_color)
+            if (score > alpha):
+                score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
+        board.pop()
+        if (score >= beta):
+            return beta
+        if (score > alpha):
+            alpha = score
+            bSearchPv = False
+    return alpha
+
 def best_move(board, side_color, depth):
     best_score = -10000000
     # the next portion is commented out in negamax implementation
@@ -193,7 +225,8 @@ def best_move(board, side_color, depth):
     for move in board.legal_moves:
         board.push(move)
         #curr_score = minimax(board, side_color, depth-1, -10000000, 10000000)
-        curr_score = -negamax(board, depth-1, -10000000, 10000000, 1-side_color) # played around with miinmax and negamax a bit
+        #curr_score = -negamax(board, depth-1, -10000000, 10000000, 1-side_color) # played around with miinmax and negamax a bit
+        curr_score = -pvSearch(board, depth-1, -10000000, 10000000, 1-side_color)
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
         if curr_score >= best_score:
             best_score = curr_score
