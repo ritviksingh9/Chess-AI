@@ -168,7 +168,7 @@ def minimax(board, side_color, depth, alpha, beta):
     if depth == 0:
         return quiescence(board, alpha, beta, -1)
     
-#Move ordering by simply moving all possible captures to the front
+    #Move ordering by simply moving all possible captures to the front
     moves = list(board.legal_moves)
     moves_sorted = []
     
@@ -234,11 +234,27 @@ def negamax(board, depth, alpha, beta, side_color):
     
     moves = list(board.legal_moves)
     moves_sorted = []
+    
     for i in moves:
         if board.is_capture(i):
             moves_sorted.append(i)
     for i in moves_sorted:
         moves.remove(i)
+    sort_captures(board, moves_sorted)
+
+    scores = [0]*len(moves_sorted)
+    for i in range(len(moves_sorted)):
+        board.push(moves_sorted[i])
+        scores[i] = eval_pos(board)
+        board.pop()
+    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
+    moves_sorted = moves_sorted_temp
+    i = 0
+    
+    for j in range(len(moves)):
+        if moves[j] in killers[depth]:
+            moves[j], moves[i] = moves[i], moves[j]
+            i += 1
     moves_sorted.extend(moves)
 
     max_eval = -10000000
@@ -259,11 +275,27 @@ def pvSearch (board, depth, alpha, beta, side_color):
     
     moves = list(board.legal_moves)
     moves_sorted = []
+    
     for i in moves:
         if board.is_capture(i):
             moves_sorted.append(i)
     for i in moves_sorted:
         moves.remove(i)
+    sort_captures(board, moves_sorted)
+
+    scores = [0]*len(moves_sorted)
+    for i in range(len(moves_sorted)):
+        board.push(moves_sorted[i])
+        scores[i] = eval_pos(board)
+        board.pop()
+    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
+    moves_sorted = moves_sorted_temp
+    i = 0
+    
+    for j in range(len(moves)):
+        if moves[j] in killers[depth]:
+            moves[j], moves[i] = moves[i], moves[j]
+            i += 1
     moves_sorted.extend(moves)
 
     bSearchPv = True
