@@ -1,6 +1,8 @@
 import chess
 from itertools import compress
 import time
+import gui
+import pygame as p
 
 PLY = 5
 killers = [[0]*3 for i in range(PLY)]
@@ -97,7 +99,7 @@ for i in range(6):
     eval_list_w.append(w)
     eval_list_b.append(b)
 
-piece_worth = [1, 3.2, 3.3, 5, 9, 90] # hmmmm, used ot be *10 but this worked better i think
+piece_worth = [10, 32, 33, 50, 90, 900] # hmmmm, used ot be *10 but this worked better i think
 
 #initializing the MVV LVA array
 mvv_lva_scores = [[0]*6 for i in range(6)]
@@ -199,8 +201,8 @@ def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
         if side_color:
-            return quiescence(board, alpha, beta, 1, 2)
-        return -quiescence(board, -beta, -alpha, -1, 2)
+            return quiescence(board, alpha, beta, 1, 3)
+        return -quiescence(board, -beta, -alpha, -1, 3)
         
     #Move ordering by simply moving all possible captures to the front
     moves = list(board.legal_moves)
@@ -327,16 +329,46 @@ def best_move(board, side_color, depth):
     # this will identify whether we are in the opening, middlegame, or endgame'''
 
 if __name__ == "__main__":
+    p.init()
+    screen = p.display.set_mode((gui.WIDTH, gui.HEIGHT))
+    clock = p.time.Clock()
+    screen.fill(p.Color("white"))
+    gui.loadImages() #do once only
+    running = True
+
     board = chess.Board()
-    
-    while 1 == 1:
-        print("Your move:")
-        x = input()
-        board.push(chess.Move.from_uci(x))
-        print(board)
+    gui.drawGameState(screen, board)
+    p.display.flip()
+    sqSelected = () #tuple
+    playerClicks = [] #keep track of player clicks
+
+    while running:
+        while (len(playerClicks) < 2 and running):
+            for e in p.event.get():
+                if e.type == p.QUIT:
+                    running = False
+                    break
+                elif e.type == p.MOUSEBUTTONDOWN:
+                    location = p.mouse.get_pos() #(x,y)
+                    col = location[0]//gui.SQ_SIZE
+                    row = location[1]//gui.SQ_SIZE
+                    if sqSelected == (row, col): #click same square twice
+                        sqSelected = () # unselect
+                        playerClicks = [] # clear plyer clicks
+                    else:
+                        sqSelected = (row, col)
+                        playerClicks.append(sqSelected)
+        board.push(chess.Move.from_uci(gui.getmovefromclick(playerClicks)))
+        sqSelected = ()
+        playerClicks = []
+        #print(board)
+        gui.drawGameState(screen, board)
+        p.display.flip()
         print("Opponent move:")
         start = time.time()
-        board.push(best_move_minimax(board, 0, 4))
+        board.push(best_move_minimax(board, 0, 2))
         end = time.time()
+        gui.drawGameState(screen, board)
+        p.display.flip()
         print("ELAPSED TIME: ", end-start)
         print(board)
