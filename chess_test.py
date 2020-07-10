@@ -2,16 +2,8 @@ import chess
 from itertools import compress
 import time
 
-<<<<<<< HEAD
 PLY = 5
 killers = [[0]*3 for i in range(PLY)]
-=======
-MOVE_ORDER_COUNT = 6
-PLY = 4
-nodes_visited = 0
-killers = [[0]*3 for i in range(PLY)]
-piece_character_to_num = ["P", "N", "B", "R", "Q", "K"]
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
 
 mate_score = 1000
 pawn_pos_eval_w = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
@@ -124,49 +116,6 @@ def eval_pos(board):
     elif side_color == 0 and not any(board.legal_moves):
         return 100000000000
 
-<<<<<<< HEAD
-=======
-#initializing the MVV LVA array
-mvv_lva_scores = [[0]*6 for i in range(6)]
-
-for i in range(6):
-    for j in range(6):
-        mvv_lva_scores[i][j] = (i+1)*100+6 - (j+1)
-
-def eval_pos(board):
-    score_w = 0
-    score_b = 0
-    #adding up pieces from white's and black's side
-    for i in range(6):
-        bitboard_w = board.pieces(i+1, 1).tolist()
-        bitboard_b = board.pieces(i+1, 0).tolist()
-        #summing up the positional advantage of the material
-        score_w += sum(list(compress(eval_list_w[i], bitboard_w)))
-        score_b += sum(list(compress(eval_list_b[i], bitboard_b)))
-        #summing up the worth of the material
-        score_w += sum(bitboard_w) * piece_worth[i]
-        score_b += sum(bitboard_b) * piece_worth[i]
-
-    return score_w-score_b
-
-def sort_captures(board, moves):
-    scores = [0]*len(moves)
-    i = 0
-    for move in moves:
-        move_str = board.uci(move)
-        attacker = board.piece_type_at(chess.SQUARE_NAMES.index(move_str[:2]))
-        victim = board.piece_type_at(chess.SQUARE_NAMES.index(move_str[2:4]))
-        #this is in the event of en passant where the target square has no piece
-        print(attacker)
-        print(victim)
-        if victim == None:
-            scores[i] += 105
-        else:
-            scores[i] = mvv_lva_scores[victim-1][attacker-1]
-        i += 1
-
-def eval_pos(board): #POV of white
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
     score_w = 0
     score_b = 0
     #adding up pieces from white's and black's side
@@ -249,7 +198,6 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
-<<<<<<< HEAD
         if side_color:
             return quiescence(board, alpha, beta, 1, 2)
         return -quiescence(board, -beta, -alpha, -1, 2)
@@ -258,36 +206,6 @@ def minimax(board, side_color, depth, alpha, beta):
     moves = list(board.legal_moves)
     moves_sorted = sort_moves(board, moves, depth, 1-side_color)
         
-=======
-        return quiescence(board, alpha, beta, -1)
-    
-    #Move ordering by simply moving all possible captures to the front
-    moves = list(board.legal_moves)
-    moves_sorted = []
-    
-    for i in moves:
-        if board.is_capture(i):
-            moves_sorted.append(i)
-    for i in moves_sorted:
-        moves.remove(i)
-    sort_captures(board, moves_sorted)
-
-    scores = [0]*len(moves_sorted)
-    for i in range(len(moves_sorted)):
-        board.push(moves_sorted[i])
-        scores[i] = eval_pos(board)
-        board.pop()
-    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
-    moves_sorted = moves_sorted_temp
-    i = 0
-    
-    for j in range(len(moves)):
-        if moves[j] in killers[depth]:
-            moves[j], moves[i] = moves[i], moves[j]
-            i += 1
-    moves_sorted.extend(moves)
-    
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
     if side_color:
         max_eval = -10000000
         #for move in board.legal_moves: 
@@ -304,10 +222,7 @@ def minimax(board, side_color, depth, alpha, beta):
                     for i in range(len(killers[0])-1, 0, -1):
                         killers[depth][i] = killers[depth][i-1]
                     killers[depth][0] = move
-<<<<<<< HEAD
                 #print ("Movehuh:{}   Evalution:{}".format(move, curr_eval))
-=======
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
                 return max_eval
         #print ("Movehuh1:{}   Evalution:{}".format(move, curr_eval))
         return max_eval
@@ -326,10 +241,7 @@ def minimax(board, side_color, depth, alpha, beta):
                     for i in range(len(killers[0])-1, 0, -1):
                         killers[depth][i] = killers[depth][i-1]
                     killers[depth][0] = move
-<<<<<<< HEAD
                 #print ("MOve:{}   Evalutionnnn:{}".format(move, curr_eval))
-=======
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
                 return min_eval
         #print ("MOve:{}   Evalution:{}".format(move, curr_eval))
         return min_eval
@@ -340,33 +252,7 @@ def negamax(board, depth, alpha, beta, side_color):
         return 2*(side_color-0.5)*eval_pos(board)
     
     moves = list(board.legal_moves)
-<<<<<<< HEAD
     moves_sorted = sort_moves(board, moves, depth)
-=======
-    moves_sorted = []
-    
-    for i in moves:
-        if board.is_capture(i):
-            moves_sorted.append(i)
-    for i in moves_sorted:
-        moves.remove(i)
-    sort_captures(board, moves_sorted)
-
-    scores = [0]*len(moves_sorted)
-    for i in range(len(moves_sorted)):
-        board.push(moves_sorted[i])
-        scores[i] = eval_pos(board)
-        board.pop()
-    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
-    moves_sorted = moves_sorted_temp
-    i = 0
-    
-    for j in range(len(moves)):
-        if moves[j] in killers[depth]:
-            moves[j], moves[i] = moves[i], moves[j]
-            i += 1
-    moves_sorted.extend(moves)
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
 
     max_eval = -10000000
     for move in moves_sorted:
@@ -385,33 +271,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
         return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
     
     moves = list(board.legal_moves)
-<<<<<<< HEAD
     moves_sorted = sort_moves(board, moves, depth)
-=======
-    moves_sorted = []
-    
-    for i in moves:
-        if board.is_capture(i):
-            moves_sorted.append(i)
-    for i in moves_sorted:
-        moves.remove(i)
-    sort_captures(board, moves_sorted)
-
-    scores = [0]*len(moves_sorted)
-    for i in range(len(moves_sorted)):
-        board.push(moves_sorted[i])
-        scores[i] = eval_pos(board)
-        board.pop()
-    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
-    moves_sorted = moves_sorted_temp
-    i = 0
-    
-    for j in range(len(moves)):
-        if moves[j] in killers[depth]:
-            moves[j], moves[i] = moves[i], moves[j]
-            i += 1
-    moves_sorted.extend(moves)
->>>>>>> bccb31de0b0650b4f39b38aff66f705f1025b263
 
     bSearchPv = True
     for move in moves_sorted:
