@@ -12,6 +12,10 @@ history = [[0]*64 for i in range(64)]
 file_to_num = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h':7}
 mate_score = 100000
 
+pvtable = {} # whenever a move beats alpha we add it here, noting by definition any move such that alpha<score<beta is a pv node
+zobrist_keys = []
+piece_to_index = {'p': 0, 'n': 1, 'b': 2, 'r': 3,'q': 4, 'k':5, 'P': 6, 'N':7, 'B':8, 'R': 9, 'Q':10, 'K':11}
+#transposition_table = {}
 
 pawn_pos_eval_w = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                     5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,
@@ -113,6 +117,26 @@ for i in range(6):
     for j in range(6):
         mvv_lva_scores[i][j] = (i+1)*100+6 - (j+1)
 
+def fill_zobrist_keys():
+    for i in range(12):
+        temp = []
+        for j in range(64):
+            temp.append(random.getrandbits(64))
+        zobrist_keys.append(temp)
+
+fill_zobrist_keys()
+
+def zobrist_hash(board):
+    h = 0
+    for i in range(64):
+        if board.piece_at(i) is not None:
+            h = h ^ zobrist_keys[piece_to_index[board.piece_at(i).symbol()]][i]
+    return h 
+
+def storepvmove (board, move):
+    index = zobrist_hash(board)
+    pvtable[index] = move
+
 def eval_pos(board): 
     side_color = 0
     if (len(board.move_stack)%2 == 0):
@@ -161,9 +185,16 @@ def sort_captures(board, moves):
         i += 1
     moves = [x for _, x in sorted(zip(scores, moves), key=lambda pair: pair[0], reverse=True)]
 
-def sort_moves(board, moves, depth, side):
+def sort_moves(board, moves, depth):
     moves_sorted = []
-
+    pos_index = zobrist_hash(board)
+    if pos_index in pvtable.keys():
+        pvmove = pvtable[pos_index]
+        #sort pv moves first (in the event node being expanded is PV node)
+        for move in moves:
+            if move is pvmove:
+                moves_sorted.append(move)
+                move.remove(move)
     #sorting captures first using MVV-LVA
     for i in moves:
         if board.is_capture(i):
@@ -176,6 +207,7 @@ def sort_moves(board, moves, depth, side):
     for j in range(len(moves)):
         if moves[j] in killers[depth]:
             moves[j], moves[i] = moves[i], moves[j]
+            moves_sorted.append(moves[i])
             i += 1
     for j in range(i):
         moves.pop(0)
@@ -215,19 +247,6 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
             alpha = score
     return alpha 
  
-pvtable = {} # whenever a move beats alpha we add it here, noting by definition any move such that alpha<score<beta is a pv node
-zobrist_keys = []
-
-def fill_zobrist_keys():
-    pass
-
-def zobrist_hash(board):
-    fill_zobrist_keys()
-
-def storepvmove (board, move):
-    index = zobrist_hash(board)
-    pvtable[index] = move
-
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
@@ -279,7 +298,6 @@ def minimax(board, side_color, depth, alpha, beta):
         #print ("MOve:{}   Evalution:{}".format(move, curr_eval))
         return min_eval
 
-
 def negamax(board, depth, alpha, beta, side_color):
     if depth == 0:
         return 2*(side_color-0.5)*eval_pos(board)
@@ -314,8 +332,9 @@ def pvSearch (board, depth, alpha, beta, side_color):
         if (bSearchPv):
             score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
         else:
-            score = -pvSearch(board, depth-1, -alpha-1, -alpha, 1-side_color)
+            score = -pvSearch(board, depth-1, -alpha-1, -alpha, 1-side_color) 
             if (score > alpha):
+                storepvmove(board, move)   
                 score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
         board.pop()
         if (score >= beta):
@@ -347,6 +366,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
     return alpha
 
 #def iterativedeepening(board, depth, alpha, beta, side_color):
+
 def best_move_minimax(board, side_color, depth):
     best_score = 10000000
     best = None
@@ -369,9 +389,8 @@ def best_move(board, side_color, depth):
     for move in board.legal_moves:
         #print (move)
         board.push(move)
-        curr_score = minimax(board, 1-side_color, depth-1, -10000000, 10000000)
         #curr_score = -negamax(board, depth-1, -10000000, 10000000, 1-side_color) # played around with miinmax and negamax a bit
-        #curr_score = -pvSearch(board, depth-1, -10000000, 10000000, 1-side_color)
+        curr_score = -pvSearch(board, depth-1, -10000000, 10000000, 1-side_color)
         print("Curr Score:{}    Best Score: {}  Move: {}".format(curr_score, best_score, move))
         if curr_score >= best_score:
             best_score = curr_score
@@ -384,7 +403,6 @@ def best_move(board, side_color, depth):
     # this will identify whether we are in the opening, middlegame, or endgame'''
 
 if __name__ == "__main__":
-    '''
     p.init()
     screen = p.display.set_mode((gui.WIDTH, gui.HEIGHT))
     clock = p.time.Clock()
@@ -427,18 +445,11 @@ if __name__ == "__main__":
         nodes_visited = 0
         print("Opponent move:")
         start = time.time()
-        board.push(best_move_minimax(board, 0, 4))
+        board.push(best_move(board, 0, 4))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
         print("ELAPSED TIME: ", end-start)
         print("NODES VISITED: ", nodes_visited)
         print(board)
-    '''
-    num1 = random.getrandbits(64)
-    num2 = random.getrandbits(64)
-    num3 = random.getrandbits(64)
-    print(num1)
-    print(num2)
-    print(num1 ^ num2)
-    print(num1 ^ num2 ^ num3)
+        print(pvtable)
