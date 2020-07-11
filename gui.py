@@ -37,11 +37,13 @@ def drawPieces(screen, board):
             if piece is not None:
                 screen.blit(IMAGES[piece.symbol()], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def getmovefromclick(playerclick):
+def getmovefromclick(playerclick, board):
     startrow = playerclick[0][0]
     startcol = playerclick[0][1]
     endrow = playerclick[1][0]
     endcol = playerclick[1][1]
+    if chess.Move.from_uci(coltofile[startcol] + rowtorank[startrow] + coltofile[endcol] + rowtorank[endrow]) not in board.legal_moves:
+        return "Illegal"
     return coltofile[startcol] + rowtorank[startrow] + coltofile[endcol] + rowtorank[endrow]
 
 def main():

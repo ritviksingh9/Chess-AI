@@ -3,6 +3,7 @@ from itertools import compress
 import time
 import gui
 import pygame as p
+import random
 
 PLY = 5
 killers = [[0]*3 for i in range(PLY)]
@@ -147,6 +148,7 @@ def sort_captures(board, moves):
         else:
             scores[i] = mvv_lva_scores[victim-1][attacker-1]
         i += 1
+    moves = [x for _, x in sorted(zip(scores, moves), key=lambda pair: pair[0], reverse=True)]
 
 def sort_moves(board, moves, depth, side):
     moves_sorted = []
@@ -157,7 +159,7 @@ def sort_moves(board, moves, depth, side):
     for i in moves_sorted:
         moves.remove(i)
     sort_captures(board, moves_sorted)
-
+    '''
     scores = [0]*len(moves_sorted)
     for i in range(len(moves_sorted)):
         board.push(moves_sorted[i])
@@ -165,8 +167,8 @@ def sort_moves(board, moves, depth, side):
         board.pop()
     moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
     moves_sorted = moves_sorted_temp
-    i = 0
-    
+    '''
+    i = 0    
     for j in range(len(moves)):
         if moves[j] in killers[depth]:
             moves[j], moves[i] = moves[i], moves[j]
@@ -187,6 +189,7 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
     for i in moves:
         if board.is_capture(i):
             captures.append(i)
+
     for i in captures:
         board.push(i)
         score = -quiescence(board, -beta, -alpha, -player, depth-1)
@@ -197,6 +200,19 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
             alpha = score
     return alpha 
  
+pvtable = {} # whenever a move beats alpha we add it here, noting by definition any move such that alpha<score<beta is a pv node
+zobrist_keys = []
+
+def fill_zobrist_keys():
+    pass
+
+def zobrist_hash(board):
+    fill_zobrist_keys()
+
+def storepvmove (board, move):
+    index = zobrist_hash(board)
+    pvtable[index] = move
+
 def minimax(board, side_color, depth, alpha, beta):
     #must implement game over!!!
     if depth == 0:
@@ -292,6 +308,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
             bSearchPv = False
     return alpha
 
+#def iterativedeepening(board, depth, alpha, beta, side_color):
 def best_move_minimax(board, side_color, depth):
     best_score = 10000000
     best = None
@@ -329,6 +346,7 @@ def best_move(board, side_color, depth):
     # this will identify whether we are in the opening, middlegame, or endgame'''
 
 if __name__ == "__main__":
+    '''
     p.init()
     screen = p.display.set_mode((gui.WIDTH, gui.HEIGHT))
     clock = p.time.Clock()
@@ -345,7 +363,7 @@ if __name__ == "__main__":
     while running:
         while (len(playerClicks) < 2 and running):
             for e in p.event.get():
-                if e.type == p.QUIT:
+                if e.type == p.QUIT: 
                     running = False
                     break
                 elif e.type == p.MOUSEBUTTONDOWN:
@@ -358,7 +376,11 @@ if __name__ == "__main__":
                     else:
                         sqSelected = (row, col)
                         playerClicks.append(sqSelected)
-        board.push(chess.Move.from_uci(gui.getmovefromclick(playerClicks)))
+        if (gui.getmovefromclick(playerClicks, board) == "Illegal"):
+            sqSelected = () 
+            playerClicks = [] 
+            continue                
+        board.push(chess.Move.from_uci(gui.getmovefromclick(playerClicks, board)))
         sqSelected = ()
         playerClicks = []
         #print(board)
@@ -366,9 +388,17 @@ if __name__ == "__main__":
         p.display.flip()
         print("Opponent move:")
         start = time.time()
-        board.push(best_move_minimax(board, 0, 2))
+        board.push(best_move_minimax(board, 0, 4))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
         print("ELAPSED TIME: ", end-start)
         print(board)
+    '''
+    num1 = random.getrandbits(64)
+    num2 = random.getrandbits(64)
+    num3 = random.getrandbits(64)
+    print(num1)
+    print(num2)
+    print(num1 ^ num2)
+    print(num1 ^ num2 ^ num3)
