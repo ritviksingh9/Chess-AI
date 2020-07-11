@@ -138,11 +138,11 @@ def storepvmove (board, move):
     index = zobrist_hash(board)
     pvtable[index] = move
 
-def eval_store(board, player): #ok yeah side color matters. given a single board, the score shud be opposite sign depending on white move or black move
+def eval_store(board, depth): #ok yeah side color matters. given a single board, the score shud be opposite sign depending on white move or black move
     index = zobrist_hash(board)
-    if index in transposition_table.keys():
-        return transposition_table[index]
-    to_store = eval_pos(board)*player
+    if (index, depth) in transposition_table.keys():
+        return transposition_table[(index, depth)]
+    to_store = eval_pos(board)
     transposition_table[index]= to_store
     return to_store
 
@@ -247,7 +247,7 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
     global nodes_visited
     nodes_visited += 1
     if depth == 0:
-        return eval_store(board,player)
+        return eval_store(board,player)*player
     stand_pat = player*eval_pos(board)
     if stand_pat >= beta:
         return beta
@@ -341,6 +341,10 @@ def negamax(board, depth, alpha, beta, side_color):
 def pvSearch (board, depth, alpha, beta, side_color):
     global nodes_visited
     nodes_visited += 1
+    index = zobrist_hash(board)
+    if ((index, depth) in transposition_table.keys()):
+        return transposition_table[(index, depth)]*2*(side_color-0.5)
+
     if depth == 0:
         return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
     
@@ -385,6 +389,8 @@ def pvSearch (board, depth, alpha, beta, side_color):
             
             alpha = score
             bSearchPv = False
+        if (score> alpha and score < beta):
+            transposition_table[(index, depth)] = score #transposition table currently stores exact scores only (no lower or upper bounds)
     return alpha
 
 #def iterativedeepening(board, depth, alpha, beta, side_color):
@@ -427,7 +433,6 @@ def best_move(board, side_color, depth):
     # this will identify whether we are in the opening, middlegame, or endgame'''
 
 if __name__ == "__main__":
-    '''
     p.init()
     screen = p.display.set_mode((gui.WIDTH, gui.HEIGHT))
     clock = p.time.Clock()
@@ -480,7 +485,7 @@ if __name__ == "__main__":
         #print(pvtable)
         #print(transposition_table)
         #if it ever evaluates score of 1000000(mate) just stop searching and play that line
-        '''
+    '''
     board = chess.Board()
     board.push(chess.Move.from_uci('e2e4'))
     board.push(chess.Move.from_uci('e7e5'))
@@ -497,3 +502,4 @@ if __name__ == "__main__":
     end = time.time()
     print("ELAPSED TIME: ", end-start)
     print("NODES VISITED: ", nodes_visited)
+    '''
