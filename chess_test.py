@@ -143,8 +143,8 @@ def eval_pos(board):
     if (len(board.move_stack)%2 == 0):
         side_color = 1
     index = zobrist_hash(board)
-    if (index, 0) in transposition_table.keys():
-        print("extracting")
+    if (index, 0) in transposition_table:
+        #print("extracting")
         return transposition_table[(index, 0)]
 
     if side_color == 1 and not any(board.legal_moves):
@@ -171,7 +171,7 @@ def eval_pos(board):
         score_w += sum(bitboard_w) * piece_worth[i]
         score_b += sum(bitboard_b) * piece_worth[i]
     rel = score_w - score_b
-    print("storing")
+    #print("storing")
     transposition_table[(index, 0)] = rel
     return rel
 
@@ -197,7 +197,7 @@ def sort_moves(board, moves, depth, start = False):
     moves_sorted = []
     pos_index = zobrist_hash(board)
     result = False
-    if pos_index in pvtable.keys():
+    if pos_index in pvtable:
         pvmove = pvtable[pos_index]
         #sort pv moves first (in the event node being expanded is PV node)
         for move in moves:
@@ -246,8 +246,8 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
     global nodes_visited
     nodes_visited += 1
     index = zobrist_hash(board)
-    if (index, depth) in transposition_table.keys():
-        return transposition_table[(index, depth)]
+    if (index, 0) in transposition_table: #depth
+        return transposition_table[(index, 0)] #depth
     if depth == 0:
         return eval_pos(board)*player
     stand_pat = player*eval_pos(board)
@@ -344,8 +344,8 @@ def pvSearch (board, depth, alpha, beta, side_color):
     global nodes_visited
     nodes_visited += 1
     index = zobrist_hash(board)
-    if ((index, depth) in transposition_table.keys()):
-        return transposition_table[(index, depth)]*2*(side_color-0.5)
+    if ((index, 0) in transposition_table): #depth
+        return transposition_table[(index, 0)]*2*(side_color-0.5) #depth
 
     if depth == 0:
         return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
@@ -392,9 +392,9 @@ def pvSearch (board, depth, alpha, beta, side_color):
             
             alpha = score
             bSearchPv = False
-        if (score> alpha and score < beta):
-            #print("storing move")
-            transposition_table[(index, depth)] = score #transposition table currently stores exact scores only (no lower or upper bounds)
+            if (score < beta):
+                #print("storing move")
+                transposition_table[(index, 0)] = score #depth #transposition table currently stores exact scores only (no lower or upper bounds)
     return alpha
 
 #def iterativedeepening(board, depth, alpha, beta, side_color):
@@ -479,7 +479,7 @@ if __name__ == "__main__":
         nodes_visited = 0
         print("Opponent move:")
         start = time.time()
-        board.push(best_move(board, 0, 2))
+        board.push(best_move(board, 0, 5))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
