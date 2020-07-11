@@ -6,7 +6,7 @@ import gui
 import pygame as p
 import random
 
-PLY = 6
+PLY = 7
 nodes_visited = 0
 killers = [[0]*2 for i in range(PLY)]
 history = [[0]*64 for i in range(64)]
@@ -138,23 +138,19 @@ def storepvmove (board, move):
     index = zobrist_hash(board)
     pvtable[index] = move
 
-def eval_store(board, depth): #ok yeah side color matters. given a single board, the score shud be opposite sign depending on white move or black move
-    index = zobrist_hash(board)
-    if (index, depth) in transposition_table.keys():
-        return transposition_table[(index, depth)]
-    to_store = eval_pos(board)
-    transposition_table[index]= to_store
-    return to_store
-
 def eval_pos(board): 
     side_color = 0
     if (len(board.move_stack)%2 == 0):
         side_color = 1
-   
+    index = zobrist_hash(board)
+    if (index, 0) in transposition_table.keys():
+        print("extracting")
+        return transposition_table[(index, 0)]
+
     if side_color == 1 and not any(board.legal_moves):
-        return -100000000000
+        return -10000000000
     elif side_color == 0 and not any(board.legal_moves):
-        return 100000000000
+        return 10000000000
 
     score_w = 0
     score_b = 0
@@ -174,7 +170,10 @@ def eval_pos(board):
         #summing up the worth of the material
         score_w += sum(bitboard_w) * piece_worth[i]
         score_b += sum(bitboard_b) * piece_worth[i]
-    return score_w-score_b
+    rel = score_w - score_b
+    print("storing")
+    transposition_table[(index, 0)] = rel
+    return rel
 
 def rank_file_to_num(str_move):
     return file_to_num[str_move[0]]+(int(str_move[1]) - 1)*8
@@ -214,7 +213,7 @@ def sort_moves(board, moves, depth, start = False):
     for i in moves_sorted:
         moves.remove(i)
     sort_captures(board, moves_sorted[int(result):])
-    #sorting killer moves second
+    #sorting killer moves 
     i = 0    
     for j in range(len(moves)):
         if moves[j] in killers[depth]:
@@ -246,8 +245,11 @@ def sort_moves(board, moves, depth, start = False):
 def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose to side color which is = 0 or 1
     global nodes_visited
     nodes_visited += 1
+    index = zobrist_hash(board)
+    if (index, depth) in transposition_table.keys():
+        return transposition_table[(index, depth)]
     if depth == 0:
-        return eval_store(board,player)*player
+        return eval_pos(board)*player
     stand_pat = player*eval_pos(board)
     if stand_pat >= beta:
         return beta
@@ -350,10 +352,9 @@ def pvSearch (board, depth, alpha, beta, side_color):
     
     moves = list(board.legal_moves)
     moves_sorted = sort_moves(board, moves, depth)
-    #print(moves_sorted)
 
     bSearchPv = True
-    for move in moves_sorted[:10]: #CHANGE BACK TO moves_sorted:, for debugging purposes only
+    for move in moves_sorted: #CHANGE BACK TO moves_sorted:, for debugging purposes only
         board.push(move)
         if (bSearchPv):
             score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
@@ -363,6 +364,8 @@ def pvSearch (board, depth, alpha, beta, side_color):
                 storepvmove(board, move)   
                 score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
         board.pop()
+        if (score == 10000000000):
+            return 10000000000
         if (score >= beta):
             #killer moves
             if not board.is_capture(move):
@@ -390,6 +393,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
             alpha = score
             bSearchPv = False
         if (score> alpha and score < beta):
+            #print("storing move")
             transposition_table[(index, depth)] = score #transposition table currently stores exact scores only (no lower or upper bounds)
     return alpha
 
@@ -475,7 +479,7 @@ if __name__ == "__main__":
         nodes_visited = 0
         print("Opponent move:")
         start = time.time()
-        board.push(best_move(board, 0, 5))
+        board.push(best_move(board, 0, 2))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
@@ -483,7 +487,7 @@ if __name__ == "__main__":
         print("NODES VISITED: ", nodes_visited)
         print(board)
         #print(pvtable)
-        #print(transposition_table)
+        print("TT LENGTH: ", len(transposition_table))
         #if it ever evaluates score of 1000000(mate) just stop searching and play that line
     '''
     board = chess.Board()
