@@ -1,3 +1,4 @@
+#note: transposition table does not include side color. so doesn't pvmove. idk if it has to. tbd
 import chess
 from itertools import compress
 import time
@@ -5,7 +6,7 @@ import gui
 import pygame as p
 import random
 
-PLY = 5
+PLY = 6
 nodes_visited = 0
 killers = [[0]*2 for i in range(PLY)]
 history = [[0]*64 for i in range(64)]
@@ -15,7 +16,7 @@ mate_score = 100000
 pvtable = {} # whenever a move beats alpha we add it here, noting by definition any move such that alpha<score<beta is a pv node
 zobrist_keys = []
 piece_to_index = {'p': 0, 'n': 1, 'b': 2, 'r': 3,'q': 4, 'k':5, 'P': 6, 'N':7, 'B':8, 'R': 9, 'Q':10, 'K':11}
-#transposition_table = {}
+transposition_table = {}
 
 pawn_pos_eval_w = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                     5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,
@@ -137,6 +138,14 @@ def storepvmove (board, move):
     index = zobrist_hash(board)
     pvtable[index] = move
 
+def eval_store(board, player): #ok yeah side color matters. given a single board, the score shud be opposite sign depending on white move or black move
+    index = zobrist_hash(board)
+    if index in transposition_table.keys():
+        return transposition_table[index]
+    to_store = eval_pos(board)*player
+    transposition_table[index]= to_store
+    return to_store
+
 def eval_pos(board): 
     side_color = 0
     if (len(board.move_stack)%2 == 0):
@@ -188,20 +197,23 @@ def sort_captures(board, moves):
 def sort_moves(board, moves, depth):
     moves_sorted = []
     pos_index = zobrist_hash(board)
+    result = False
     if pos_index in pvtable.keys():
         pvmove = pvtable[pos_index]
         #sort pv moves first (in the event node being expanded is PV node)
         for move in moves:
             if move is pvmove:
+                result = True
                 moves_sorted.append(move)
-                move.remove(move)
+        if result:
+            move.pop(0)
     #sorting captures first using MVV-LVA
     for i in moves:
         if board.is_capture(i):
             moves_sorted.append(i)
     for i in moves_sorted:
         moves.remove(i)
-    sort_captures(board, moves_sorted)
+    sort_captures(board, moves_sorted[int(result):])
     #sorting killer moves second
     i = 0    
     for j in range(len(moves)):
@@ -224,11 +236,13 @@ def sort_moves(board, moves, depth):
     return moves_sorted
 
 def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose to side color which is = 0 or 1
+    global nodes_visited
+    nodes_visited += 1
+    if depth == 0:
+        return eval_store(board,player)
     stand_pat = player*eval_pos(board)
     if stand_pat >= beta:
         return beta
-    if depth == 0:
-        return stand_pat
     if alpha <= stand_pat:
         alpha = stand_pat
     moves = list(board.legal_moves)
@@ -303,7 +317,7 @@ def negamax(board, depth, alpha, beta, side_color):
         return 2*(side_color-0.5)*eval_pos(board)
     
     moves = list(board.legal_moves)
-    moves_sorted = sort_moves(board, moves, depth)
+    moves_sorted = sort_moves(board, moves, PLY)
 
     max_eval = -10000000
     for move in moves_sorted:
@@ -320,14 +334,14 @@ def pvSearch (board, depth, alpha, beta, side_color):
     global nodes_visited
     nodes_visited += 1
     if depth == 0:
-        #return 2*(side_color-0.5)*eval_pos(board)
         return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
     
     moves = list(board.legal_moves)
     moves_sorted = sort_moves(board, moves, depth)
+    #print(moves_sorted)
 
     bSearchPv = True
-    for move in moves_sorted:
+    for move in moves_sorted[:10]: #CHANGE BACK TO moves_sorted:, for debugging purposes only
         board.push(move)
         if (bSearchPv):
             score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
@@ -385,8 +399,10 @@ def best_move_minimax(board, side_color, depth):
 def best_move(board, side_color, depth):
     best_score = -10000000    
     best = None
+    moves = list(board.legal_moves)
+    moves_sorted = sort_moves(board, moves, 5)
 
-    for move in board.legal_moves:
+    for move in moves_sorted:
         #print (move)
         board.push(move)
         #curr_score = -negamax(board, depth-1, -10000000, 10000000, 1-side_color) # played around with miinmax and negamax a bit
@@ -445,11 +461,13 @@ if __name__ == "__main__":
         nodes_visited = 0
         print("Opponent move:")
         start = time.time()
-        board.push(best_move(board, 0, 4))
+        board.push(best_move(board, 0, 5))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
         print("ELAPSED TIME: ", end-start)
         print("NODES VISITED: ", nodes_visited)
         print(board)
-        print(pvtable)
+        #print(pvtable)
+        #print(transposition_table)
+        #if it ever evaluates score of 1000000(mate) just stop searching and play that line
