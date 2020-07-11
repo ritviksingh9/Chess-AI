@@ -6,9 +6,13 @@ import pygame as p
 import random
 
 PLY = 5
-killers = [[0]*3 for i in range(PLY)]
+nodes_visited = 0
+killers = [[0]*2 for i in range(PLY)]
+history = [[0]*64 for i in range(64)]
+file_to_num = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h':7}
+mate_score = 100000
 
-mate_score = 1000
+
 pawn_pos_eval_w = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                     5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,
                     1.0,  1.0,  2.0,  3.0,  3.0,  2.0,  1.0,  1.0,
@@ -100,7 +104,7 @@ for i in range(6):
     eval_list_w.append(w)
     eval_list_b.append(b)
 
-piece_worth = [10, 32, 33, 50, 90, 900] # hmmmm, used ot be *10 but this worked better i think
+piece_worth = [10, 32, 33, 50, 90, 900] # hmmmm, used to be *10 but this worked better i think
 
 #initializing the MVV LVA array
 mvv_lva_scores = [[0]*6 for i in range(6)]
@@ -124,7 +128,13 @@ def eval_pos(board):
     #adding up pieces from white's and black's side
     for i in range(6):
         bitboard_w = board.pieces(i+1, 1).tolist() 
-        bitboard_b = board.pieces(i+1, 0).tolist() 
+        bitboard_b = board.pieces(i+1, 0).tolist()
+        #encouraging bishop pairs
+        if i == 2:
+            if sum(bitboard_w) == 2:
+                score_w += 5
+            if sum(bitboard_b) == 2:
+                score_b += 5
         #summing up the positional advantage of the material
         score_w += sum(list(compress(eval_list_w[i], bitboard_w)))
         score_b += sum(list(compress(eval_list_b[i], bitboard_b)))
@@ -132,6 +142,9 @@ def eval_pos(board):
         score_w += sum(bitboard_w) * piece_worth[i]
         score_b += sum(bitboard_b) * piece_worth[i]
     return score_w-score_b
+
+def rank_file_to_num(str_move):
+    return file_to_num[str_move[0]]+(int(str_move[1]) - 1)*8
 
 def sort_captures(board, moves):
     scores = [0]*len(moves)
@@ -141,8 +154,6 @@ def sort_captures(board, moves):
         attacker = board.piece_type_at(chess.SQUARE_NAMES.index(move_str[:2]))
         victim = board.piece_type_at(chess.SQUARE_NAMES.index(move_str[2:4]))
         #this is in the event of en passant where the target square has no piece
-        #print(attacker)
-        #print(victim)
         if victim == None:
             scores[i] += 105
         else:
@@ -152,27 +163,31 @@ def sort_captures(board, moves):
 
 def sort_moves(board, moves, depth, side):
     moves_sorted = []
-    
+
+    #sorting captures first using MVV-LVA
     for i in moves:
         if board.is_capture(i):
             moves_sorted.append(i)
     for i in moves_sorted:
         moves.remove(i)
     sort_captures(board, moves_sorted)
-    '''
-    scores = [0]*len(moves_sorted)
-    for i in range(len(moves_sorted)):
-        board.push(moves_sorted[i])
-        scores[i] = eval_pos(board)
-        board.pop()
-    moves_sorted_temp = [x for _, x in sorted(zip(scores, moves_sorted), key=lambda pair: pair[0], reverse=True)]
-    moves_sorted = moves_sorted_temp
-    '''
+    #sorting killer moves second
     i = 0    
     for j in range(len(moves)):
         if moves[j] in killers[depth]:
             moves[j], moves[i] = moves[i], moves[j]
             i += 1
+    for j in range(i):
+        moves.pop(0)
+    #sorting history heuristic third
+    scores = []
+    for j in range(len(moves)):
+        move_str = board.uci(moves[j])
+        from_square = move_str[:2]
+        to_square = move_str[2:4]
+        scores.append(history[rank_file_to_num(from_square)][rank_file_to_num(to_square)])
+    moves = [x for _, x in sorted(zip(scores, moves), key=lambda pair: pair[0], reverse=True)]
+    
     moves_sorted.extend(moves)
     return moves_sorted
 
@@ -284,6 +299,8 @@ def negamax(board, depth, alpha, beta, side_color):
     return max_eval
 
 def pvSearch (board, depth, alpha, beta, side_color):
+    global nodes_visited
+    nodes_visited += 1
     if depth == 0:
         #return 2*(side_color-0.5)*eval_pos(board)
         return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
@@ -302,8 +319,29 @@ def pvSearch (board, depth, alpha, beta, side_color):
                 score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
         board.pop()
         if (score >= beta):
+            #killer moves
+            if not board.is_capture(move):
+                for i in range(len(killers[0])-1, 0, -1):
+                    killers[depth][i] = killers[depth][i-1]
+                killers[depth][0] = move
+            #history heuristic
+            move_str = board.uci(move)
+            from_square = move_str[:2]
+            to_square = move_str[2:4]
+            history[rank_file_to_num(from_square)][rank_file_to_num(to_square)] += 1
             return beta
         if (score > alpha):
+            #killer moves
+            if not board.is_capture(move):
+                for i in range(len(killers[0])-1, 0, -1):
+                    killers[depth][i] = killers[depth][i-1]
+                killers[depth][0] = move
+            #history heuristic
+            move_str = board.uci(move)
+            from_square = move_str[:2]
+            to_square = move_str[2:4]
+            history[rank_file_to_num(from_square)][rank_file_to_num(to_square)] += 1
+            
             alpha = score
             bSearchPv = False
     return alpha
@@ -386,6 +424,7 @@ if __name__ == "__main__":
         #print(board)
         gui.drawGameState(screen, board)
         p.display.flip()
+        nodes_visited = 0
         print("Opponent move:")
         start = time.time()
         board.push(best_move_minimax(board, 0, 4))
@@ -393,6 +432,7 @@ if __name__ == "__main__":
         gui.drawGameState(screen, board)
         p.display.flip()
         print("ELAPSED TIME: ", end-start)
+        print("NODES VISITED: ", nodes_visited)
         print(board)
     '''
     num1 = random.getrandbits(64)

@@ -8,7 +8,7 @@ MAX_FPS = 15
 IMAGES = {}
 rowtorank = {0:'8', 1:'7', 2:'6', 3:'5', 4:'4', 5:'3', 6:'2', 7:'1'}
 coltofile = {0:'a', 1:'b', 2:'c', 3:'d', 4:'e', 5:'f', 6:'g', 7:'h'}
-
+piece_to_pics = {'P':'wp', 'N':'wn', 'B':'wb', 'R':'wr', 'Q':'wq', 'K':'wk', 'p': 'bp','n': 'bn', 'b': 'bb', 'r':'br', 'q':'bq', 'k':'bk'}
 '''
 Initialize a global dictionary of images. Called once
 '''
@@ -37,13 +37,11 @@ def drawPieces(screen, board):
             if piece is not None:
                 screen.blit(IMAGES[piece.symbol()], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def getmovefromclick(playerclick, board):
+def getmovefromclick(playerclick):
     startrow = playerclick[0][0]
     startcol = playerclick[0][1]
     endrow = playerclick[1][0]
     endcol = playerclick[1][1]
-    if chess.Move.from_uci(coltofile[startcol] + rowtorank[startrow] + coltofile[endcol] + rowtorank[endrow]) not in board.legal_moves:
-        return "Illegal"
     return coltofile[startcol] + rowtorank[startrow] + coltofile[endcol] + rowtorank[endrow]
 
 def main():
@@ -54,7 +52,7 @@ def main():
     loadImages() #do once only
     running = True
     sqSelected = () #tuple
-    playerClick = [] #keep track of player clicks
+    playerClicks = [] #keep track of player clicks
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
@@ -79,4 +77,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
