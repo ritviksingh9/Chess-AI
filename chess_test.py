@@ -6,7 +6,8 @@ import gui
 import pygame as p
 import random
 
-PLY = 7
+PLY = 4
+QDEPTH = 3
 nodes_visited = 0
 killers = [[0]*2 for i in range(PLY)]
 history = [[0]*64 for i in range(64)]
@@ -246,10 +247,10 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
     global nodes_visited
     nodes_visited += 1
     index = zobrist_hash(board)
-    if (index, 0) in transposition_table: #depth
-        return transposition_table[(index, 0)] #depth
     if depth == 0:
         return eval_pos(board)*player
+    if (index, depth) in transposition_table: 
+        return transposition_table[(index, depth)] 
     stand_pat = player*eval_pos(board)
     if stand_pat >= beta:
         return beta
@@ -257,16 +258,16 @@ def quiescence(board, alpha, beta, player, depth): #player = 1 or -1, as oppose 
         alpha = stand_pat
     moves = list(board.legal_moves)
     captures = []
-    for i in moves:
-        if board.is_capture(i):
-            captures.append(i)
-
+    for i in moves: 
+        if board.is_capture(i): 
+            captures.append(i) 
+ 
     for i in captures:
         board.push(i)
         score = -quiescence(board, -beta, -alpha, -player, depth-1)
         board.pop()
         if score >= beta:
-            return score
+            return beta
         if score > alpha:
             alpha = score
     return alpha 
@@ -284,31 +285,24 @@ def minimax(board, side_color, depth, alpha, beta):
         
     if side_color:
         max_eval = -10000000
-        #for move in board.legal_moves: 
         for move in moves_sorted:
             board.push(move)
             curr_eval = minimax(board, 0, depth-1, alpha, beta)
             max_eval = max(max_eval, curr_eval)
-            #print(move, curr_eval, max_eval)
             alpha = max(alpha, max_eval)
-            #pop last move to allow for next move
             board.pop()
             if alpha >= beta:
                 if not board.is_capture(move):
                     for i in range(len(killers[0])-1, 0, -1):
                         killers[depth][i] = killers[depth][i-1]
                     killers[depth][0] = move
-                #print ("Movehuh:{}   Evalution:{}".format(move, curr_eval))
                 return max_eval
-        #print ("Movehuh1:{}   Evalution:{}".format(move, curr_eval))
         return max_eval
     else:
         min_eval = 10000000
-        #for move in board.legal_moves:
         for move in moves_sorted:
             board.push(move)
             curr_eval = minimax(board, 1, depth-1, alpha, beta)
-            #print ("{}  {}".format(curr_eval, move))
             min_eval = min(min_eval, curr_eval)
             beta = min(beta, min_eval)
             board.pop()
@@ -317,9 +311,7 @@ def minimax(board, side_color, depth, alpha, beta):
                     for i in range(len(killers[0])-1, 0, -1):
                         killers[depth][i] = killers[depth][i-1]
                     killers[depth][0] = move
-                #print ("MOve:{}   Evalutionnnn:{}".format(move, curr_eval))
                 return min_eval
-        #print ("MOve:{}   Evalution:{}".format(move, curr_eval))
         return min_eval
 
 def negamax(board, depth, alpha, beta, side_color):
@@ -344,15 +336,13 @@ def pvSearch (board, depth, alpha, beta, side_color):
     global nodes_visited
     nodes_visited += 1
     index = zobrist_hash(board)
-    if ((index, 0) in transposition_table): #depth
-        return transposition_table[(index, 0)]*2*(side_color-0.5) #depth
-
+    #if ((index, depth) in transposition_table): 
+        #return transposition_table[(index, depth)]*2*(side_color-0.5) 
     if depth == 0:
-        return quiescence(board, alpha, beta, 2*(side_color-0.5), 2)
+        return quiescence(board, alpha, beta, 2*(side_color-0.5), QDEPTH)
     
     moves = list(board.legal_moves)
     moves_sorted = sort_moves(board, moves, depth)
-
     bSearchPv = True
     for move in moves_sorted: #CHANGE BACK TO moves_sorted:, for debugging purposes only
         board.push(move)
@@ -365,6 +355,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
                 score = -pvSearch(board, depth-1, -beta, -alpha, 1-side_color)
         board.pop()
         if (score == 10000000000):
+            print('checkmate detected')
             return 10000000000
         if (score >= beta):
             #killer moves
@@ -377,6 +368,7 @@ def pvSearch (board, depth, alpha, beta, side_color):
             from_square = move_str[:2]
             to_square = move_str[2:4]
             history[rank_file_to_num(from_square)][rank_file_to_num(to_square)] += 1
+            
             return beta
         if (score > alpha):
             #killer moves
@@ -389,12 +381,10 @@ def pvSearch (board, depth, alpha, beta, side_color):
             from_square = move_str[:2]
             to_square = move_str[2:4]
             history[rank_file_to_num(from_square)][rank_file_to_num(to_square)] += 1
-            
+
             alpha = score
             bSearchPv = False
-            if (score < beta):
-                #print("storing move")
-                transposition_table[(index, 0)] = score #depth #transposition table currently stores exact scores only (no lower or upper bounds)
+    transposition_table[(index, depth)] = alpha #transposition table currently stores exact scores only (no lower or upper bounds)
     return alpha
 
 #def iterativedeepening(board, depth, alpha, beta, side_color):
@@ -403,7 +393,10 @@ def best_move_minimax(board, side_color, depth):
     best_score = 10000000
     best = None
 
-    for move in board.legal_moves:
+    moves = list(board.legal_moves)
+    moves_sorted = sort_moves(board, moves, PLY-1, start=True)
+
+    for move in moves_sorted[:12]:
         board.push(move)
         #print (move)
         curr_score = minimax(board, 1-side_color, depth-1, -10000000, 10000000)
@@ -443,7 +436,7 @@ if __name__ == "__main__":
     screen.fill(p.Color("white"))
     gui.loadImages() #do once only
     running = True
-
+    
     board = chess.Board()
     gui.drawGameState(screen, board)
     p.display.flip()
@@ -479,7 +472,7 @@ if __name__ == "__main__":
         nodes_visited = 0
         print("Opponent move:")
         start = time.time()
-        board.push(best_move(board, 0, 5))
+        board.push(best_move(board, 0, PLY))
         end = time.time()
         gui.drawGameState(screen, board)
         p.display.flip()
@@ -490,20 +483,9 @@ if __name__ == "__main__":
         print("TT LENGTH: ", len(transposition_table))
         #if it ever evaluates score of 1000000(mate) just stop searching and play that line
     '''
-    board = chess.Board()
-    board.push(chess.Move.from_uci('e2e4'))
-    board.push(chess.Move.from_uci('e7e5'))
-    board.push(chess.Move.from_uci('g1f3'))
-    board.push(chess.Move.from_uci('b8c6'))
-    board.push(chess.Move.from_uci('b1c3'))
-    board.push(chess.Move.from_uci('f8c5'))
-    board.push(chess.Move.from_uci('d2d3'))
-    board.push(chess.Move.from_uci('g8f6'))
-    board.push(chess.Move.from_uci('c1g5'))
-    print(board)
+    board2 = chess.Board('r2q1b1r/pppb1Qpk/3p4/3P1R2/2P1P1n1/2N1B3/PP4PP/R5K1 b - - 8 23')
     start = time.time()
-    board.push(best_move(board, 0, PLY))
-    end = time.time()
-    print("ELAPSED TIME: ", end-start)
-    print("NODES VISITED: ", nodes_visited)
+    board2.push(best_move(board2, 0, 5))
+    print(board2)
+    end = time.time()   
     '''
